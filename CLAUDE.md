@@ -12,6 +12,7 @@ Written in Rust, using clap for CLI argument parsing.
 - `cargo test` — run all tests
 - `cargo clippy` — run the Rust linter
 - `cargo fmt --check` — check code formatting
+- `cargo audit` — check dependencies for known vulnerabilities (requires `cargo install cargo-audit`)
 
 ## Project Structure
 
