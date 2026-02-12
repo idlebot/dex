@@ -1,4 +1,4 @@
-# Runs on every push to main. Reads the commit title to decide how to bump the version.
+# Runs after CI passes on main. Reads the commit title to decide how to bump the version.
 # Commit titles should start with [major], [minor], or [patch]:
 #   [patch] Fix download timeout   → v0.1.0 → v0.1.1
 #   [minor] Add zip extraction     → v0.1.1 → v0.2.0
@@ -7,7 +7,9 @@
 name: Auto Tag
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -17,6 +19,8 @@ permissions:
 jobs:
   auto-tag:
     name: Auto Tag
+    # Only tag if CI passed — workflow_run fires on completion regardless of result.
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
