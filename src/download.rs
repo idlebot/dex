@@ -46,7 +46,10 @@ pub fn download_file(url: &str, output_dir: &Path) -> Result<PathBuf, Box<dyn st
     let filename = url
         .rsplit('/') // Split from the right on '/'
         .next() // Take the first segment (= last part of URL)
-        .unwrap_or("download") // If URL has no '/', use "download" as fallback
+        .unwrap_or("download")
+        .split('?') // Strip query params (e.g., from CDN redirect URLs)
+        .next()
+        .unwrap_or("download")
         .to_string();
     // ↑ `.to_string()` converts a `&str` (borrowed) into a `String` (owned).
     //   We need ownership because we're building a PathBuf with it below.

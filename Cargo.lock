@@ -325,6 +325,8 @@ dependencies = [
  "flate2",
  "indicatif",
  "reqwest",
+ "serde",
+ "serde_json",
  "tar",
  "xz2",
  "zip",
