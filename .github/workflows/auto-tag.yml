@@ -11,7 +11,8 @@ on:
     branches: [main]
 
 permissions:
-  contents: write  # Needed to push tags
+  contents: write   # Needed to push tags
+  actions: write    # Needed to trigger the Release workflow via workflow_dispatch
 
 jobs:
   auto-tag:
@@ -42,6 +43,7 @@ jobs:
           fi
 
       - name: Calculate next version and push tag
+        id: tag
         if: steps.bump.outputs.bump != 'none'
         run: |
           BUMP="${{ steps.bump.outputs.bump }}"
@@ -74,6 +76,19 @@ jobs:
           NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
           echo "New tag: $NEW_TAG"
 
-          # Create and push the tag. This will trigger the Release workflow.
+          # Create and push the tag.
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
+
+          # Trigger the Release workflow explicitly via workflow_dispatch.
+          # Tags pushed by GITHUB_TOKEN don't trigger `on: push: tags` events
+          # (GitHub prevents workflow chains to avoid infinite loops), so we
+          # use the GitHub API to dispatch the Release workflow directly.
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Trigger release workflow
+        if: steps.bump.outputs.bump != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run release.yml --ref main --field tag=${{ steps.tag.outputs.tag }}
