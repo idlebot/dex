@@ -42,7 +42,7 @@ jobs:
             echo "bump=none" >> $GITHUB_OUTPUT
           fi
 
-      - name: Calculate next version and push tag
+      - name: Calculate next version
         id: tag
         if: steps.bump.outputs.bump != 'none'
         run: |
@@ -73,18 +73,41 @@ jobs:
             patch) PATCH=$((PATCH + 1)) ;;
           esac
 
-          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          NEW_TAG="v${NEW_VERSION}"
           echo "New tag: $NEW_TAG"
-
-          # Create and push the tag.
-          git tag "$NEW_TAG"
-          git push origin "$NEW_TAG"
-
-          # Trigger the Release workflow explicitly via workflow_dispatch.
-          # Tags pushed by GITHUB_TOKEN don't trigger `on: push: tags` events
-          # (GitHub prevents workflow chains to avoid infinite loops), so we
-          # use the GitHub API to dispatch the Release workflow directly.
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Cargo.toml version, commit, and tag
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          NEW_VERSION="${{ steps.tag.outputs.version }}"
+          NEW_TAG="${{ steps.tag.outputs.tag }}"
+
+          # Update the version field in Cargo.toml using sed.
+          # This matches the line `version = "x.y.z"` under [package] and replaces
+          # just the version string. The pattern is specific enough to avoid matching
+          # dependency version lines.
+          sed -i "0,/^version = \".*\"/s//version = \"$NEW_VERSION\"/" Cargo.toml
+
+          # Regenerate Cargo.lock to reflect the new version.
+          cargo update --workspace
+
+          # Commit the version bump. This commit message intentionally has no
+          # [major]/[minor]/[patch] prefix, so the next auto-tag run (triggered
+          # by this push) will be a harmless no-op.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock
+          git commit -m "Bump version to $NEW_VERSION"
+
+          # Tag this new commit (which has the correct version in Cargo.toml)
+          # so the release build picks up the right version.
+          git tag "$NEW_TAG"
+
+          # Push both the commit and the tag together.
+          git push origin main "$NEW_TAG"
 
       - name: Trigger release workflow
         if: steps.bump.outputs.bump != 'none'
