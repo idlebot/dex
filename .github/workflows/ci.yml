@@ -50,3 +50,16 @@ jobs:
       # If code isn't formatted, this fails and tells you which files need fixing.
       - name: Check formatting
         run: cargo fmt --check
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `cargo audit` checks dependencies against the RustSec Advisory Database
+      # for known security vulnerabilities. Fails if any are found.
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run audit
+        run: cargo audit
