@@ -12,6 +12,22 @@ categories = ["command-line-utilities"]
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 
+# HTTP client — reqwest is the most popular Rust HTTP library (like axios for JS).
+# "blocking" = synchronous API (simpler than async for a CLI tool).
+# "rustls-tls" = uses a pure-Rust TLS implementation (no OpenSSL dependency, easier cross-compilation).
+reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
+
+# Archive/compression libraries:
+flate2 = "1"       # gzip (.gz) compression — used by .tar.gz
+bzip2 = "0.5"      # bzip2 (.bz2) compression — used by .tar.bz2
+xz2 = "0.1"        # xz/lzma (.xz) compression — used by .tar.xz
+zstd = "0.13"      # zstandard (.zst) compression — used by .tar.zst, Facebook's modern compressor
+tar = "0.4"         # reading/extracting tar archives (.tar)
+zip = "2"           # reading/extracting zip archives (.zip)
+
+# Progress bar — indicatif is the standard crate for terminal progress indicators.
+indicatif = "0.17"
+
 [profile.release]
 strip = true
 lto = true
