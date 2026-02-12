@@ -6,10 +6,24 @@ on:
   push:
     tags:
       - "v*"  # Only run when a tag starting with "v" is pushed (e.g., v0.1.0)
+  # Also allow being triggered programmatically by the auto-tag workflow.
+  # This is needed because tags pushed by GITHUB_TOKEN don't trigger `push` events
+  # (GitHub prevents workflow chains to avoid infinite loops).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g., v0.1.0)"
+        required: true
 
 # Needs write access to create releases and upload artifacts.
 permissions:
   contents: write
+
+# Resolve the tag name depending on how this workflow was triggered.
+# `push` event → github.ref_name is the tag (e.g., "v0.1.0")
+# `workflow_dispatch` → tag comes from the input parameter
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -46,6 +60,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
@@ -116,7 +132,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create ${{ github.ref_name }} \
-            --title "${{ github.ref_name }}" \
+          gh release create ${{ env.RELEASE_TAG }} \
+            --title "${{ env.RELEASE_TAG }}" \
             --generate-notes \
             artifacts/*
