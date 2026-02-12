@@ -18,6 +18,8 @@ Written in Rust, using clap for CLI argument parsing.
 - `src/main.rs` — entry point and CLI definition
 - `src/download.rs` — HTTP downloading with progress bar
 - `src/extract.rs` — archive detection and extraction logic
+- `src/platform.rs` — platform/arch detection, normalization, and asset matching (provider-agnostic)
+- `src/github.rs` — GitHub release URL parsing and API interaction
 - `Cargo.toml` — project metadata and dependencies
 - `Cargo.lock` — pinned dependency versions (committed for binaries)
 

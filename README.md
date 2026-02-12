@@ -47,6 +47,30 @@ dex https://example.com/archive.tar.gz --keep
 dex https://example.com/file.txt
 ```
 
+## GitHub Releases
+
+Point dex at a GitHub releases page and it automatically picks the right binary for your platform:
+
+```bash
+# Download latest release for your platform
+dex https://github.com/BurntSushi/ripgrep/releases
+
+# Download a specific version
+dex https://github.com/BurntSushi/ripgrep/releases/tag/14.1.1
+
+# Just the repo URL works too
+dex https://github.com/BurntSushi/ripgrep
+
+# Override platform/arch detection
+dex https://github.com/BurntSushi/ripgrep/releases --platform linux --arch arm64
+```
+
+Set `GITHUB_TOKEN` to avoid API rate limits:
+
+```bash
+export GITHUB_TOKEN=ghp_...
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
