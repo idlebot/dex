@@ -1,0 +1,79 @@
+# Runs on every push to main. Reads the commit title to decide how to bump the version.
+# Commit titles should start with [major], [minor], or [patch]:
+#   [patch] Fix download timeout   → v0.1.0 → v0.1.1
+#   [minor] Add zip extraction     → v0.1.1 → v0.2.0
+#   [major] Rewrite download engine → v0.2.0 → v1.0.0
+# If no prefix is found, no tag is created.
+name: Auto Tag
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write  # Needed to push tags
+
+jobs:
+  auto-tag:
+    name: Auto Tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history so we can find existing tags
+
+      - name: Determine version bump
+        id: bump
+        run: |
+          # Get the commit message of the push that triggered this workflow.
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "Commit message: $COMMIT_MSG"
+
+          # Check for [major], [minor], or [patch] prefix (case-insensitive).
+          if echo "$COMMIT_MSG" | grep -iq '^\[major\]'; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+          elif echo "$COMMIT_MSG" | grep -iq '^\[minor\]'; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+          elif echo "$COMMIT_MSG" | grep -iq '^\[patch\]'; then
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          else
+            echo "No version prefix found in commit message. Skipping."
+            echo "bump=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate next version and push tag
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          BUMP="${{ steps.bump.outputs.bump }}"
+
+          # Find the latest version tag. `git tag -l 'v*'` lists all tags starting
+          # with "v", then `sort -V` sorts them by version number, and `tail -1`
+          # picks the highest. If no tags exist yet, default to v0.0.0.
+          LATEST=$(git tag -l 'v*' | sort -V | tail -1)
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"
+          fi
+
+          echo "Latest tag: $LATEST"
+
+          # Strip the "v" prefix and split into major.minor.patch components.
+          VERSION="${LATEST#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          # Increment the appropriate component based on the commit prefix.
+          # Semantic versioning rules:
+          #   major bump → reset minor and patch to 0
+          #   minor bump → reset patch to 0
+          #   patch bump → just increment patch
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New tag: $NEW_TAG"
+
+          # Create and push the tag. This will trigger the Release workflow.
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"

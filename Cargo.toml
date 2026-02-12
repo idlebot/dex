@@ -1,0 +1,18 @@
+[package]
+name = "dex"
+version = "0.1.0"
+edition = "2024"
+description = "A download tool that automatically extracts archives"
+license = "MIT"
+repository = "https://github.com/idlebot/dex"
+readme = "README.md"
+keywords = ["download", "extract", "curl", "wget", "archive"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "z"

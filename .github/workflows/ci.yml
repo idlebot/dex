@@ -1,0 +1,52 @@
+# Runs on every pull request to ensure code quality before merging.
+# GitHub can require this workflow to pass before a PR is mergeable
+# (configured in repo Settings → Branches → Branch protection rules).
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# If you push new commits to a PR, cancel the in-progress CI run and start fresh.
+# Saves GitHub Actions minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Caches the `target/` directory between runs so dependencies don't
+      # get recompiled every time. Cuts CI time significantly after first run.
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test
+
+  clippy:
+    name: Clippy (linter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+
+      # clippy is Rust's official linter. `-D warnings` makes warnings into
+      # errors so the CI fails if there are any lint issues.
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+  fmt:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `cargo fmt --check` verifies code is formatted without modifying it.
+      # `rustfmt` is Rust's official formatter (like prettier for JS).
+      # If code isn't formatted, this fails and tells you which files need fixing.
+      - name: Check formatting
+        run: cargo fmt --check

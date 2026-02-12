@@ -1,0 +1,122 @@
+# Triggered when a version tag (e.g., v0.1.0) is pushed.
+# Builds release binaries for all supported platforms and creates a GitHub Release.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"  # Only run when a tag starting with "v" is pushed (e.g., v0.1.0)
+
+# Needs write access to create releases and upload artifacts.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # A "matrix" runs the same job multiple times with different variables.
+      # This builds dex for 6 different platform/architecture combinations in parallel.
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            artifact: dex-linux-x86_64
+
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            artifact: dex-linux-aarch64
+
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            artifact: dex-macos-x86_64
+
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            artifact: dex-macos-aarch64
+
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact: dex-windows-x86_64
+
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            artifact: dex-windows-aarch64
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # Installs the Rust "target" (cross-compilation toolchain) for the
+      # platform we're building for. On native targets this is a no-op,
+      # but for cross-compilation (e.g., building aarch64 on x86_64) it's needed.
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+
+      # For cross-compiling Linux aarch64 on an x86_64 runner, we need a
+      # cross-compilation linker. gcc-aarch64-linux-gnu provides this.
+      - name: Install cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # Package the binary into a .tar.gz (Unix) or .zip (Windows).
+      # The artifact name includes the platform so users can pick the right one.
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../${{ matrix.artifact }}.tar.gz dex
+          cd ../../..
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path dex.exe -DestinationPath ../../../${{ matrix.artifact }}.zip
+          cd ../../..
+
+      # Upload the package so the "release" job below can download and attach
+      # all binaries to a single GitHub Release.
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.zip
+
+  release:
+    name: Create Release
+    needs: build  # Wait for all builds to finish before creating the release.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      # `gh release create` makes a GitHub Release page with the tag name as title
+      # and attaches all the binary packages for download.
+      # --generate-notes auto-generates release notes from commit messages since
+      # the last tag.
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            artifacts/*
