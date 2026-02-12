@@ -16,6 +16,8 @@ Written in Rust, using clap for CLI argument parsing.
 ## Project Structure
 
 - `src/main.rs` — entry point and CLI definition
+- `src/download.rs` — HTTP downloading with progress bar
+- `src/extract.rs` — archive detection and extraction logic
 - `Cargo.toml` — project metadata and dependencies
 - `Cargo.lock` — pinned dependency versions (committed for binaries)
 
@@ -24,4 +26,10 @@ Written in Rust, using clap for CLI argument parsing.
 - Run `cargo fmt` before committing
 - All code must pass `cargo clippy` with no warnings
 - All tests must pass before merging PRs
-- Commit messages should be prefixed with `[major]`, `[minor]`, or `[patch]` to trigger auto-versioning
+- All changes go through pull requests — never push directly to main
+- **PR titles must start with `[major]`, `[minor]`, or `[patch]`** — this is enforced by CI and controls automatic version bumping
+  - `[patch]` — bug fixes, minor tweaks, docs
+  - `[minor]` — new features, new CLI flags
+  - `[major]` — breaking changes
+- PRs are squash-merged, so the PR title becomes the commit message on main
+- The version in `Cargo.toml` is a placeholder — release builds derive the version from git tags automatically

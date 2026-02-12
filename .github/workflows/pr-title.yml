@@ -1,0 +1,33 @@
+# Validates that PR titles start with [major], [minor], or [patch].
+# This is required because when PRs are squash-merged, the PR title becomes
+# the commit message on main, and the auto-tag workflow reads that prefix
+# to determine the version bump.
+name: PR Title
+
+on:
+  pull_request:
+    # Trigger on open, edit (title change), and synchronize (new commits).
+    types: [opened, edited, synchronize]
+    branches: [main]
+
+jobs:
+  check-title:
+    name: Check PR title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version prefix
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          echo "PR title: $TITLE"
+
+          if echo "$TITLE" | grep -iqE '^\[(major|minor|patch)\]'; then
+            echo "Valid prefix found."
+          else
+            echo "::error::PR title must start with [major], [minor], or [patch]."
+            echo ""
+            echo "Examples:"
+            echo "  [patch] Fix download timeout"
+            echo "  [minor] Add zip extraction support"
+            echo "  [major] Rewrite download engine"
+            exit 1
+          fi

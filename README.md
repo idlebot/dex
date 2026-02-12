@@ -34,9 +34,22 @@ cargo install --git https://github.com/idlebot/dex
 # Download and auto-extract an archive
 dex https://example.com/archive.tar.gz
 
-# Download a regular file (no extraction)
+# Extract to a specific directory
+dex https://example.com/archive.tar.gz -o ./mydir
+
+# Download without extracting
+dex https://example.com/archive.tar.gz --no-extract
+
+# Download, extract, and keep the original archive
+dex https://example.com/archive.tar.gz --keep
+
+# Download a regular file (no extraction needed)
 dex https://example.com/file.txt
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
