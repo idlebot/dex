@@ -1,9 +1,12 @@
-# Runs on every pull request to ensure code quality before merging.
+# Runs on every pull request and push to main to ensure code quality.
 # GitHub can require this workflow to pass before a PR is mergeable
 # (configured in repo Settings → Branches → Branch protection rules).
+# On main, the Auto Tag workflow waits for this to pass before tagging.
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
